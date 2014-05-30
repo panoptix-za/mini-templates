@@ -1,0 +1,8 @@
+stats {%  for s in series -%}
+avg({{ s }}) AS {{ s }} {% endfor -%}
+by _time,dp_transaction | eval s1="{% for s in series -%}
+{{ s }} {% endfor -%}" | makemv s1 | mvexpand s1 | eval yval=case({% for s in series %}s1=="{{ s }}",{{ s }},{% endfor -%}
+) | xyseries _time,s1,yval
+
+
+eval total_latency={% for s in series %}{{ s }}+{% endfor %}0

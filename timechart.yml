@@ -1,0 +1,12 @@
+variables:
+  series: 'request_header_read,request_header_sent,front_side_transform_begun,front_side_transform_complete,entire_request_transmitted,front_side_style_sheet_ready,front_side_parsing_complete,response_header_received,response_headers_sent,back_side_transform_begun,back_side_transform_complete,response_transmitted,back_side_style_sheet_read,back_side_parsing_complete,back_side_connection_attempted,back_side_connection_completed'
+
+
+split:
+  - var: series
+    delim: ','
+
+templates:
+  - src: tests/search.jinja2
+    dst: tests/search.out
+

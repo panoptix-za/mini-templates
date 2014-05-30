@@ -1,0 +1,27 @@
+Test 1: {{ test }}
+Test 2, path: {{ PATH }}
+
+{% for var in complex -%}
+And a {{ var }}
+{% endfor %}
+This should be interesting.
+
+{% if complex[0] == 'one' -%}
+Hello one
+{% endif %}
+#One
+
+##Two
+
+###Three
+
+{% for value in dict %}
+{{ value }} is {{ dict[value] }}
+{% endfor %}
+
+{{ bigstring }}
+
+Paths:
+{% for p in PATH -%}
+    - {{ p }}
+{% endfor %}

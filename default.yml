@@ -1,9 +1,23 @@
 variables:
   test: 'this is a test'
-
+  complex:
+    - one
+    - two
+    - three
+  dict:
+    one: '1'
+    two: '2'
+    three: '3'
+  bigstring: |
+    This is cool.
+    No?
 
 evariables:
   - PATH
+
+split:
+  - var: PATH
+    delim: ':'
 
 templates:
   - src: tests/template1.jinja2

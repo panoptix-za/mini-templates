@@ -100,10 +100,10 @@ if 'templates' in data:
                 filedata=myfile.read()
 
             for e in engines:
-                if 'e' == 'jinja2':
+                if e == 'jinja2':
                     template = Jinja2Template(filedata)
                     filedata = template.render(template_variables)
-                elif 'e' == 'mako':
+                elif e == 'mako':
                         filedata = MakoTemplate(filedata).render(template_variables)
 
 
