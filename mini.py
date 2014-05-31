@@ -101,10 +101,16 @@ if 'templates' in data:
 
             for e in engines:
                 if e == 'jinja2':
-                    template = Jinja2Template(filedata)
-                    filedata = template.render(template_variables)
+                    try:
+                        template = Jinja2Template(filedata)
+                        filedata = template.render(template_variables)
+                    except Exception,e:
+                        logging.debug( "Error: ", str(e) )
                 elif e == 'mako':
+                    try:
                         filedata = MakoTemplate(filedata).render(template_variables)
+                    except Exception,e:
+                        logging.debug( "Error: ", str(e) )
 
 
             f = open(os.path.join(args.workingdir,dst),'w')
