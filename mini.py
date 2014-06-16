@@ -6,6 +6,7 @@ __author__ = 'stephanbuys'
 
 from jinja2 import Template as Jinja2Template
 from mako.template import Template as MakoTemplate
+from mako.exceptions import RichTraceback
 from yaml import load, dump
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -101,16 +102,27 @@ if 'templates' in data:
 
             for e in engines:
                 if e == 'jinja2':
+                    logging.debug("Processign Jinja template")
                     try:
                         template = Jinja2Template(filedata)
                         filedata = template.render(template_variables)
                     except Exception,e:
                         logging.debug( "Error: ", str(e) )
                 elif e == 'mako':
+                    logging.debug("Processign Mako template")
                     try:
-                        filedata = MakoTemplate(filedata).render(template_variables)
-                    except Exception,e:
-                        logging.debug( "Error: ", str(e) )
+
+                        filedata = MakoTemplate(filedata).render(**template_variables)
+
+                    except:
+                        traceback = RichTraceback()
+                        for (filename, lineno, function, line) in traceback.traceback:
+                            print "File %s, line %s, in %s" % (filename, lineno, function)
+                            print line, "\n"
+                        print "%s: %s" % (str(traceback.error.__class__.__name__), traceback.error)
+                    # except Exception,e:
+                    #     logging.debug( "Error: ", str(e) )
+
 
 
             f = open(os.path.join(args.workingdir,dst),'w')
