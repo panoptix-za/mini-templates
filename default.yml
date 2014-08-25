@@ -22,6 +22,5 @@ split:
 templates:
   - src: tests/template1.jinja2
     dst: tests/template1.out
-
     
 
