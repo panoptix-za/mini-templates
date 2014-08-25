@@ -5,8 +5,6 @@ __author__ = 'stephanbuys'
 # Copyright (c) 2014 Panoptix CC. All right reserved.
 
 from jinja2 import Template as Jinja2Template
-from mako.template import Template as MakoTemplate
-from mako.exceptions import RichTraceback
 from yaml import load, dump
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -70,14 +68,6 @@ if 'evariables' in data:
         template_variables[key] = os.environ.get(key)
         logging.debug("Environment Variable (" + str(key) + ") : " + str(template_variables[key]) )
 
-# def split(value,seperator=None):
-#     if seperator:
-#         return value.strip().split(seperator)
-#     else:
-#         return value.strip().split()
-#
-# environment.filters['split'] = split
-
 if 'split' in data:
     for var in data['split']:
         template_variables[var['var']] = template_variables[var['var']].split(var['delim'])
@@ -87,7 +77,7 @@ if 'templates' in data:
     logging.debug("New template.")
     for template in data['templates']:
         # try:
-            engines = ['jinja2','mako']
+            engines = ['jinja2']
             if 'engines' in template:
                 engines = template['engines']
 
@@ -108,29 +98,8 @@ if 'templates' in data:
                         filedata = template.render(template_variables)
                     except Exception,e:
                         logging.debug( "Error: ", str(e) )
-                elif e == 'mako':
-                    logging.debug("Processign Mako template")
-                    try:
-
-                        filedata = MakoTemplate(filedata).render(**template_variables)
-
-                    except:
-                        traceback = RichTraceback()
-                        for (filename, lineno, function, line) in traceback.traceback:
-                            print "File %s, line %s, in %s" % (filename, lineno, function)
-                            print line, "\n"
-                        print "%s: %s" % (str(traceback.error.__class__.__name__), traceback.error)
-                    # except Exception,e:
-                    #     logging.debug( "Error: ", str(e) )
-
-
 
             f = open(os.path.join(args.workingdir,dst),'w')
             f.write(filedata) # python will convert \n to os.linesep
             f.close()
-
-
-        # except Exception,e:
-        #     logging.error( "Error: ", str(e) )
-
 
