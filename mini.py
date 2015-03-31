@@ -17,8 +17,9 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Mini Jinja')
-parser.add_argument('--controlfile', type=str, default='default.yml',help='The control file.')
-parser.add_argument('--loglevel', type=str, default='INFO',help="Log level.")
+parser.add_argument('--controlfile', type=str, default='default.yml', help='The control file.')
+parser.add_argument('--projectfile', type=str, default='project/project.yml', help="The project file.")
+parser.add_argument('--loglevel', type=str, default='INFO', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 args = parser.parse_args()
 
@@ -43,8 +44,15 @@ try:
 except:
     filename = 'default.yml'
 
+try:
+    project_filename = args.projectfile
+except:
+    project_filename = 'project/project.yml'
+
+
 logging.debug("Working Directory " + args.workingdir)
 logging.debug("Control File: " + filename)
+logging.debug("Project File: " + filename)
 
 #read the default.yml file if we can
 data = {}
@@ -52,28 +60,84 @@ try:
     stream = file(filename, 'r')
     data = load(stream, Loader=Loader)
 except Exception, e:
-    logging.error( "Error: ", e )
+    logging.error( "Error: " + str(e))
     exit(1)
 
+
+#read the project.yml file if we can
+project = {}
+try:
+    stream = file(project_filename, 'r')
+    project = load(stream, Loader=Loader)
+except Exception, e:
+    logging.error( "Error: " + str(e) + " " + project_filename)
+    exit(1)
 
 template_variables = {}
 
 if 'variables' in data:
+    if project and 'variables' in project:
+        data['variables'] = dict(data['variables'].items() + project['variables'].items())
     for key in data['variables']:
         template_variables[key] = data['variables'][key]
-        logging.debug("User Variable (" + str(key) + ") : " + str(template_variables[key] ))
+        logging.debug("User Variable (" + str(key) + ") : " + str(template_variables[key]))
 
 if 'evariables' in data:
+    if 'evariables' in project:
+        data['evariables'] = dict(data['evariables'].items() + project['evariables'].items())
     for key in data['evariables']:
-        template_variables[key] = os.environ.get(key)
-        logging.debug("Environment Variable (" + str(key) + ") : " + str(template_variables[key]) )
+        template_variables[key]     = os.environ.get(key)
+        logging.debug("Environment Variable (" + str(key) + ") : " + str(template_variables[key]))
 
 if 'split' in data:
     for var in data['split']:
         template_variables[var['var']] = template_variables[var['var']].split(var['delim'])
 
+def findTemplates():
+    templates = []
+
+    topdir = '.'
+
+    # The arg argument for walk, and subsequently ext for step
+    exten = '.orig.tpl'
+
+    def step((ext), dirname, names):
+        ext = ext.lower()
+
+        for name in names:
+            if name.lower().endswith(ext):
+                # Instead of printing, open up the log file for appending
+                tplate = os.path.join(dirname, name)
+                destfile = tplate.replace(exten, '')
+                templates.append({'src': tplate, 'dst': destfile})
+                # with open(logpath, 'a') as logfile:
+                #     logfile.write('%s\n' % os.path.join(dirname, name))
+
+    # Change the arg to a tuple containing the file
+    # extension and the log file name. Start the walk.
+    os.path.walk(topdir, step, (exten))
+
+    return templates
+
+recurseTemplates = findTemplates()
+
+if len(recurseTemplates) > 0:
+    if 'templates' in data:
+        data['templates'] = data['templates'] + recurseTemplates
+    else:
+        data['templates'] = recurseTemplates
+
+
 #process the templates
 if 'templates' in data:
+    if project and 'templates' in project:
+        for folder in project['templates']:
+            if '/' not in folder['src']:
+                folder['src'] = 'project/' + folder['src']
+                folder['dst'] = 'project/' + folder['dst']
+        data['templates'] = data['templates'] + project['templates']
+
+
     logging.debug("New template.")
     for template in data['templates']:
         # try:
