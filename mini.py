@@ -19,7 +19,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Mini Jinja')
 parser.add_argument('--controlfile', type=str, default='default.yml', help='The control file.')
 parser.add_argument('--projectfile', type=str, default='project/project.yml', help="The project file.")
-parser.add_argument('--loglevel', type=str, default='INFO', help="Log level.")
+parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 args = parser.parse_args()
 
@@ -70,8 +70,7 @@ try:
     stream = file(project_filename, 'r')
     project = load(stream, Loader=Loader)
 except Exception, e:
-    logging.error( "Error: " + str(e) + " " + project_filename)
-    exit(1)
+    logging.info( "Info: " + str(e) + " " + project_filename)
 
 template_variables = {}
 
