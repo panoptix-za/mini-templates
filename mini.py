@@ -18,7 +18,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Mini Jinja')
 parser.add_argument('--controlfile', type=str, default='default.yml', help='The control file.')
-parser.add_argument('--projectfile', type=str, default='project/project.yml', help="The project file.")
+parser.add_argument('--projectfile', type=str, default='local/project.yml', help="The project file.")
 parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 args = parser.parse_args()
@@ -85,7 +85,7 @@ if 'evariables' in data:
     if 'evariables' in project:
         data['evariables'] = dict(data['evariables'].items() + project['evariables'].items())
     for key in data['evariables']:
-        template_variables[key]     = os.environ.get(key)
+        template_variables[key] = os.environ.get(key)
         logging.debug("Environment Variable (" + str(key) + ") : " + str(template_variables[key]))
 
 if 'split' in data:
