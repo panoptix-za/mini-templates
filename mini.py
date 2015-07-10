@@ -47,7 +47,7 @@ except:
 try:
     project_filename = args.projectfile
 except:
-    project_filename = 'project/project.yml'
+    project_filename = 'local/project.yml'
 
 
 logging.debug("Working Directory " + args.workingdir)
