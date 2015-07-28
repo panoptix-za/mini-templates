@@ -5,7 +5,8 @@ __author__ = 'stephanbuys'
 # Copyright (c) 2014 Panoptix CC. All right reserved.
 
 from jinja2 import Template as Jinja2Template
-from yaml import load, dump
+from yaml import load
+
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
@@ -14,6 +15,7 @@ import os
 import logging
 import sys
 import argparse
+import json
 
 
 parser = argparse.ArgumentParser(description='Mini Jinja')
@@ -52,13 +54,22 @@ except:
 
 logging.debug("Working Directory " + args.workingdir)
 logging.debug("Control File: " + filename)
-logging.debug("Project File: " + filename)
+logging.debug("Project File: " + project_filename)
 
 #read the default.yml file if we can
 data = {}
 try:
-    stream = file(filename, 'r')
-    data = load(stream, Loader=Loader)
+    if '.json' in filename:
+        with open(filename) as json_data:
+            data = json.load(json_data)
+            json_data.close()
+
+    elif '.yml' in filename:
+        stream = file(filename, 'r')
+        data = load(stream, Loader=Loader)
+
+
+
 except Exception, e:
     logging.error( "Error: " + str(e))
     exit(1)
@@ -67,8 +78,16 @@ except Exception, e:
 #read the project.yml file if we can
 project = {}
 try:
-    stream = file(project_filename, 'r')
-    project = load(stream, Loader=Loader)
+    if '.json' in project_filename:
+        with open(project_filename) as json_data:
+            project = json.load(json_data)
+            json_data.close()
+
+    elif '.yml' in project_filename:
+        stream = file(project_filename, 'r')
+        project = load(stream, Loader=Loader)
+
+
 except Exception, e:
     logging.info( "Info: " + str(e) + " " + project_filename)
 
