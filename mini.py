@@ -196,7 +196,8 @@ if 'templates' in data:
                             collect[match['dst']] = collect[match['dst']] + filedata
                         else:
                             collect[match['dst']] = filedata
-                    continue
+
+                continue
 
             logging.debug("skipping collect for " + src)
 
