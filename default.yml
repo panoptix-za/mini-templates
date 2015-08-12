@@ -24,3 +24,6 @@ templates:
     dst: tests/template1.out
     
 
+collect:
+  - regex: dc-\d{2}.+\.orig\.tpl
+    dst: tests/combined.yaml

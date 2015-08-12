@@ -16,6 +16,7 @@ import logging
 import sys
 import argparse
 import json
+import re
 
 
 parser = argparse.ArgumentParser(description='Mini Jinja')
@@ -128,8 +129,6 @@ def findTemplates():
                 tplate = os.path.join(dirname, name)
                 destfile = tplate.replace(exten, '')
                 templates.append({'src': tplate, 'dst': destfile})
-                # with open(logpath, 'a') as logfile:
-                #     logfile.write('%s\n' % os.path.join(dirname, name))
 
     # Change the arg to a tuple containing the file
     # extension and the log file name. Start the walk.
@@ -146,6 +145,7 @@ if len(recurseTemplates) > 0:
         data['templates'] = recurseTemplates
 
 
+collect = {}
 #process the templates
 if 'templates' in data:
     if project and 'templates' in project:
@@ -176,12 +176,38 @@ if 'templates' in data:
                 if e == 'jinja2':
                     logging.debug("Processign Jinja template")
                     try:
+                        if filedata[-1:] != '\n':
+                            logging.warn(src + " does not contain a newline at the end of file, " + src + " might appear mangled.")
+
                         template = Jinja2Template(filedata)
                         filedata = template.render(template_variables)
                     except Exception,e:
                         logging.debug( "Error: ", str(e) )
 
-            f = open(os.path.join(args.workingdir,dst),'w')
-            f.write(filedata) # python will convert \n to os.linesep
-            f.close()
+            if 'collect' in data:
+                logging.debug("Found a collect directive")
+                for match in data['collect']:
+
+                    if re.search(match['regex'], src, re.MULTILINE):
+                        logging.debug("Collecting " + src + " into " + match['dst'])
+
+
+                        if match['dst'] in collect:
+                            collect[match['dst']] = collect[match['dst']] + filedata
+                        else:
+                            collect[match['dst']] = filedata
+                    else:
+                        logging.debug("skipping collect for " + src)
+
+                        logging.debug("Writing " + dst)
+                        f = open(os.path.join(args.workingdir, dst),'w')
+                        f.write(filedata)
+                        f.close()
+
+# print collect
+for key in collect:
+    logging.debug("Writing " + key)
+    f = open(os.path.join(args.workingdir,key),'w')
+    f.write(collect[key])
+    f.close()
 
