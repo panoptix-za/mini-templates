@@ -177,7 +177,7 @@ if 'templates' in data:
                     logging.debug("Processign Jinja template")
                     try:
                         if filedata[-1:] != '\n':
-                            logging.warn(src + " does not contain a newline at the end of file, " + src + " might appear mangled.")
+                            logging.warn(src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
 
                         template = Jinja2Template(filedata)
                         filedata = template.render(template_variables)
@@ -196,17 +196,18 @@ if 'templates' in data:
                             collect[match['dst']] = collect[match['dst']] + filedata
                         else:
                             collect[match['dst']] = filedata
-                    else:
-                        logging.debug("skipping collect for " + src)
+                    continue
 
-                        logging.debug("Writing " + dst)
-                        f = open(os.path.join(args.workingdir, dst),'w')
-                        f.write(filedata)
-                        f.close()
+            logging.debug("skipping collect for " + src)
+
+            logging.debug("Writing " + dst)
+            f = open(os.path.join(args.workingdir, dst),'w')
+            f.write(filedata)
+            f.close()
 
 # print collect
 for key in collect:
-    logging.debug("Writing " + key)
+    logging.debug("Writing 'collected' file " + key)
     f = open(os.path.join(args.workingdir,key),'w')
     f.write(collect[key])
     f.close()
