@@ -193,7 +193,7 @@ if 'templates' in data:
 
 
                         if match['dst'] in collect:
-                            collect[match['dst']] = collect[match['dst']] + filedata
+                            collect[match['dst']] = collect[match['dst']] + "\n" + filedata
                         else:
                             collect[match['dst']] = filedata
 
