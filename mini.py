@@ -191,20 +191,18 @@ if 'templates' in data:
                     if re.search(match['regex'], src, re.MULTILINE):
                         logging.debug("Collecting " + src + " into " + match['dst'])
 
-
                         if match['dst'] in collect:
                             collect[match['dst']] = collect[match['dst']] + "\n" + filedata
                         else:
                             collect[match['dst']] = filedata
 
-                continue
+                    else:
 
-            logging.debug("skipping collect for " + src)
-
-            logging.debug("Writing " + dst)
-            f = open(os.path.join(args.workingdir, dst),'w')
-            f.write(filedata)
-            f.close()
+                        logging.debug("Skipping collect for " + src)
+                        logging.debug("Writing " + dst)
+                        f = open(os.path.join(args.workingdir, dst),'w')
+                        f.write(filedata)
+                        f.close()
 
 # print collect
 for key in collect:
