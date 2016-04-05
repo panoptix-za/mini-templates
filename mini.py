@@ -24,8 +24,7 @@ parser.add_argument('--local', type=str, default='local.yml', help="The project 
 parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 parser.add_argument('--templateext', type=str, default='.orig.tpl', help="Template pattern (orig.tpl)")
-parser.add_argument('--std', type=bool, default=False, help="Use STDIN/STDOUT")
-parser.add_argument('--test', type=bool, default=False, help="Return as much output as possible in templates")
+parser.add_argument('--stdio', action='store_true', help="Use STDIN/STDOUT")
 args = parser.parse_args()
 
 try:
@@ -43,6 +42,7 @@ def setup_logging():
     ch.setFormatter(formatter)
     lg.addHandler(ch)
 
+errorlevel = 0
 
 setup_logging()
 
@@ -118,6 +118,32 @@ if 'split' in data:
 
 logging.debug("Final data: " + json.dumps(data, 2))
 
+def jinja_parse(filedata, template_variables, filename):
+    global errorlevel
+    try:
+        if filedata[-1:] != '\n':
+            logging.warn(
+                src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
+
+        env = Environment()
+        parsed_content = env.parse(filedata)
+
+        for var in meta.find_undeclared_variables(parsed_content):
+            if var not in template_variables:
+                logging.error("Variable: " + var + " not defined (found in: " + filename + ")")
+                errorlevel = errorlevel + 1
+
+
+        template = Jinja2Template(filedata, undefined=DebugUndefined)
+
+        filedata = template.render(template_variables)
+
+        return filedata
+
+    except Exception, e:
+        logging.debug("Error: ", e)
+        return ""
+
 
 def findTemplates():
     templates = []
@@ -154,36 +180,15 @@ if len(recurseTemplates) > 0:
 logging.debug("Templates found: " + json.dumps(recurseTemplates))
 # exit(1)
 
+if args.stdio:
+    filedata = ""
+    for line in sys.stdin:
+        filedata = filedata + line
+    filedata = jinja_parse(filedata, template_variables, "STDIN")
+    print filedata
+    exit(errorlevel)
+
 collect = {}
-
-
-def jinja_parse(filedata, template_variables, filename):
-    # global var, template, filedata, e
-    try:
-        if filedata[-1:] != '\n':
-            logging.warn(
-                src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
-
-        env = Environment()
-        parsed_content = env.parse(filedata)
-
-        for var in meta.find_undeclared_variables(parsed_content):
-            if var not in template_variables:
-                logging.error("Variable: " + var + " not defined (found in: " + filename + ")")
-                
-        if args.test:
-            template = Jinja2Template(filedata, undefined=DebugUndefined)
-        else:
-            template = Jinja2Template(filedata)
-
-        filedata = template.render(template_variables)
-        # meta.
-        return filedata
-
-    except Exception, e:
-        logging.debug("Error: ", e)
-        return ""
-
 
 # process the templates
 if 'templates' in data:
@@ -242,3 +247,5 @@ for key in collect:
     f = open(os.path.join(args.workingdir, key), 'w')
     f.write(collect[key])
     f.close()
+
+exit(errorlevel)
