@@ -18,7 +18,6 @@ import argparse
 import json
 import re
 
-
 parser = argparse.ArgumentParser(description='Mini Jinja')
 parser.add_argument('--default', type=str, default='default.yml', help='The control file.')
 parser.add_argument('--local', type=str, default='local.yml', help="The project file.")
@@ -33,6 +32,7 @@ try:
 except:
     loglevel = 'DEBUG'
 
+
 def setup_logging():
     global lg, ch, formatter
     lg = logging.getLogger()
@@ -41,6 +41,7 @@ def setup_logging():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     lg.addHandler(ch)
+
 
 setup_logging()
 
@@ -51,7 +52,7 @@ logging.debug("Working Directory " + args.workingdir)
 logging.debug("Control File: " + filename)
 logging.debug("Project File: " + project_filename)
 
-#read the default.yml file if we can
+# read the default.yml file if we can
 data = {}
 try:
     if '.json' in filename:
@@ -68,7 +69,7 @@ try:
 except Exception, e:
     logging.warn("No default.yml file: " + filename + " ," + str(e))
 
-#read the project.yml file if we can
+# read the project.yml file if we can
 project = {}
 try:
     if '.json' in project_filename:
@@ -86,12 +87,12 @@ except Exception, e:
 
 template_variables = {}
 
-#Merge local with default
+# Merge local with default
 for key in project:
     if key in data:
-        if isinstance(data[key],dict):
+        if isinstance(data[key], dict):
             data[key] = dict(data[key].items() + project[key].items())
-        if isinstance(data[key],list):
+        if isinstance(data[key], list):
             data[key] = data[key] + project[key]
     else:
         data[key] = project[key]
@@ -114,7 +115,8 @@ if 'split' in data:
     for var in data['split']:
         template_variables[var['var']] = template_variables[var['var']].split(var['delim'])
 
-logging.debug("Final data: " + json.dumps(data,2))
+logging.debug("Final data: " + json.dumps(data, 2))
+
 
 def findTemplates():
     templates = []
@@ -141,6 +143,7 @@ def findTemplates():
 
     return templates
 
+
 recurseTemplates = findTemplates()
 
 if len(recurseTemplates) > 0:
@@ -153,7 +156,7 @@ logging.debug("Templates found: " + json.dumps(recurseTemplates))
 # exit(1)
 
 collect = {}
-#process the templates
+# process the templates
 if 'templates' in data:
     if project and 'templates' in project:
         for folder in project['templates']:
@@ -162,76 +165,69 @@ if 'templates' in data:
                 folder['dst'] = 'project/' + folder['dst']
         data['templates'] = data['templates'] + project['templates']
 
-
     logging.debug("New template.")
     for template in data['templates']:
-        # try:
-            engines = ['jinja2']
-            if 'engines' in template:
-                engines = template['engines']
 
-            src = template['src']
-            dst = template['dst']
-            logging.debug("Template source :" + src)
-            logging.debug("Template destination :" + dst)
+        src = template['src']
+        dst = template['dst']
+        logging.debug("Template source :" + src)
+        logging.debug("Template destination :" + dst)
 
-            filedata = ""
-            with open (os.path.join(args.workingdir,src), "r") as myfile:
-                filedata=myfile.read()
+        filedata = ""
+        with open(os.path.join(args.workingdir, src), "r") as myfile:
+            filedata = myfile.read()
 
-            for e in engines:
-                if e == 'jinja2':
-                    logging.debug("Processing Jinja template")
-                    try:
-                        if filedata[-1:] != '\n':
-                            logging.warn(src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
+            logging.debug("Processing Jinja template")
+            try:
+                if filedata[-1:] != '\n':
+                    logging.warn(
+                        src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
 
-                        env = Environment()
-                        parsed_content = env.parse(filedata)
+                env = Environment()
+                parsed_content = env.parse(filedata)
 
-                        for var in meta.find_undeclared_variables(parsed_content):
-                            if var not in template_variables:
-                                logging.error("Variable: " + var + " not defined")
+                for var in meta.find_undeclared_variables(parsed_content):
+                    if var not in template_variables:
+                        logging.error("Variable: " + var + " not defined")
 
-                        template = Jinja2Template(filedata, undefined=DebugUndefined)
+                template = Jinja2Template(filedata, undefined=DebugUndefined)
 
-                        filedata = template.render(template_variables)
-                        # meta.
+                filedata = template.render(template_variables)
+                # meta.
 
-                    except Exception,e:
-                        logging.debug( "Error: ", e)
+            except Exception, e:
+                logging.debug("Error: ", e)
 
 
-            if 'collect' in data:
-                logging.debug("Found a collect directive")
-                for match in data['collect']:
+        if 'collect' in data:
+            logging.debug("Found a collect directive")
+            for match in data['collect']:
 
-                    if re.search(match['regex'], src, re.MULTILINE):
-                        logging.debug("Collecting " + src + " into " + match['dst'])
+                if re.search(match['regex'], src, re.MULTILINE):
+                    logging.debug("Collecting " + src + " into " + match['dst'])
 
-                        if match['dst'] in collect:
-                            collect[match['dst']] = collect[match['dst']] + "\n" + filedata
-                        else:
-                            collect[match['dst']] = filedata
-
+                    if match['dst'] in collect:
+                        collect[match['dst']] = collect[match['dst']] + "\n" + filedata
                     else:
+                        collect[match['dst']] = filedata
 
-                        logging.debug("Skipping collect for " + src)
-                        logging.debug("Writing " + dst)
-                        f = open(os.path.join(args.workingdir, dst),'w')
-                        f.write(filedata)
-                        f.close()
+                else:
 
-            else:
-                logging.debug("Writing " + dst)
-                f = open(os.path.join(args.workingdir, dst), 'w')
-                f.write(filedata)
-                f.close()
+                    logging.debug("Skipping collect for " + src)
+                    logging.debug("Writing " + dst)
+                    f = open(os.path.join(args.workingdir, dst), 'w')
+                    f.write(filedata)
+                    f.close()
+
+        else:
+            logging.debug("Writing " + dst)
+            f = open(os.path.join(args.workingdir, dst), 'w')
+            f.write(filedata)
+            f.close()
 
 # print collect
 for key in collect:
     logging.debug("Writing 'collected' file " + key)
-    f = open(os.path.join(args.workingdir,key),'w')
+    f = open(os.path.join(args.workingdir, key), 'w')
     f.write(collect[key])
     f.close()
-
