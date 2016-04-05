@@ -25,6 +25,7 @@ parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 parser.add_argument('--templateext', type=str, default='.orig.tpl', help="Template pattern (orig.tpl)")
 parser.add_argument('--std', type=bool, default=False, help="Use STDIN/STDOUT")
+parser.add_argument('--test', type=bool, default=False, help="Return as much output as possible in templates")
 args = parser.parse_args()
 
 try:
@@ -123,8 +124,6 @@ def findTemplates():
 
     topdir = '.'
 
-    # The arg argument for walk, and subsequently ext for step
-    # exten = '.orig.tpl'
     exten = args.templateext
 
     def step((ext), dirname, names):
@@ -158,7 +157,7 @@ logging.debug("Templates found: " + json.dumps(recurseTemplates))
 collect = {}
 
 
-def jinja_parse(filedata, template_variables):
+def jinja_parse(filedata, template_variables, filename):
     # global var, template, filedata, e
     try:
         if filedata[-1:] != '\n':
@@ -170,9 +169,12 @@ def jinja_parse(filedata, template_variables):
 
         for var in meta.find_undeclared_variables(parsed_content):
             if var not in template_variables:
-                logging.error("Variable: " + var + " not defined")
-
-        template = Jinja2Template(filedata, undefined=DebugUndefined)
+                logging.error("Variable: " + var + " not defined (found in: " + filename + ")")
+                
+        if args.test:
+            template = Jinja2Template(filedata, undefined=DebugUndefined)
+        else:
+            template = Jinja2Template(filedata)
 
         filedata = template.render(template_variables)
         # meta.
@@ -206,8 +208,7 @@ if 'templates' in data:
 
             logging.debug("Processing Jinja template")
 
-            filedata = jinja_parse(filedata, template_variables)
-
+            filedata = jinja_parse(filedata, template_variables, src)
 
         if 'collect' in data:
             logging.debug("Found a collect directive")
