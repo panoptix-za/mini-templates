@@ -156,6 +156,33 @@ logging.debug("Templates found: " + json.dumps(recurseTemplates))
 # exit(1)
 
 collect = {}
+
+
+def jinja_parse(filedata, template_variables):
+    # global var, template, filedata, e
+    try:
+        if filedata[-1:] != '\n':
+            logging.warn(
+                src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
+
+        env = Environment()
+        parsed_content = env.parse(filedata)
+
+        for var in meta.find_undeclared_variables(parsed_content):
+            if var not in template_variables:
+                logging.error("Variable: " + var + " not defined")
+
+        template = Jinja2Template(filedata, undefined=DebugUndefined)
+
+        filedata = template.render(template_variables)
+        # meta.
+        return filedata
+
+    except Exception, e:
+        logging.debug("Error: ", e)
+        return ""
+
+
 # process the templates
 if 'templates' in data:
     if project and 'templates' in project:
@@ -178,25 +205,8 @@ if 'templates' in data:
             filedata = myfile.read()
 
             logging.debug("Processing Jinja template")
-            try:
-                if filedata[-1:] != '\n':
-                    logging.warn(
-                        src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
 
-                env = Environment()
-                parsed_content = env.parse(filedata)
-
-                for var in meta.find_undeclared_variables(parsed_content):
-                    if var not in template_variables:
-                        logging.error("Variable: " + var + " not defined")
-
-                template = Jinja2Template(filedata, undefined=DebugUndefined)
-
-                filedata = template.render(template_variables)
-                # meta.
-
-            except Exception, e:
-                logging.debug("Error: ", e)
+            filedata = jinja_parse(filedata, template_variables)
 
 
         if 'collect' in data:
