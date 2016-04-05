@@ -2,9 +2,9 @@
 
 __author__ = 'stephanbuys'
 
-# Copyright (c) 2014 Panoptix CC. All right reserved.
+# Copyright (c) 2016 Panoptix CC. All right reserved.
 
-from jinja2 import Template as Jinja2Template
+from jinja2 import Template as Jinja2Template, DebugUndefined, Environment, meta
 from yaml import load
 
 try:
@@ -20,10 +20,12 @@ import re
 
 
 parser = argparse.ArgumentParser(description='Mini Jinja')
-parser.add_argument('--controlfile', type=str, default='default.yml', help='The control file.')
-parser.add_argument('--projectfile', type=str, default='local/project.yml', help="The project file.")
+parser.add_argument('--default', type=str, default='default.yml', help='The control file.')
+parser.add_argument('--local', type=str, default='local.yml', help="The project file.")
 parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
+parser.add_argument('--templateext', type=str, default='.orig.tpl', help="Template pattern (orig.tpl)")
+parser.add_argument('--std', type=bool, default=False, help="Use STDIN/STDOUT")
 args = parser.parse_args()
 
 try:
@@ -42,16 +44,8 @@ def setup_logging():
 
 setup_logging()
 
-try:
-    filename = args.controlfile
-except:
-    filename = 'default.yml'
-
-try:
-    project_filename = args.projectfile
-except:
-    project_filename = 'local/project.yml'
-
+filename = args.default
+project_filename = args.local
 
 logging.debug("Working Directory " + args.workingdir)
 logging.debug("Control File: " + filename)
@@ -72,9 +66,7 @@ try:
 
 
 except Exception, e:
-    logging.error( "Error: " + str(e))
-    exit(1)
-
+    logging.warn("No default.yml file: " + filename + " ," + str(e))
 
 #read the project.yml file if we can
 project = {}
@@ -90,27 +82,39 @@ try:
 
 
 except Exception, e:
-    logging.info( "Info: " + str(e) + " " + project_filename)
+    logging.info("No project.yml file: " + str(e) + " " + project_filename)
 
 template_variables = {}
 
+#Merge local with default
+for key in project:
+    if key in data:
+        if isinstance(data[key],dict):
+            data[key] = dict(data[key].items() + project[key].items())
+        if isinstance(data[key],list):
+            data[key] = data[key] + project[key]
+    else:
+        data[key] = project[key]
+
 if 'variables' in data:
-    if project and 'variables' in project:
-        data['variables'] = dict(data['variables'].items() + project['variables'].items())
     for key in data['variables']:
         template_variables[key] = data['variables'][key]
         logging.debug("User Variable (" + str(key) + ") : " + str(template_variables[key]))
+else:
+    logging.warn("No variables found")
 
 if 'evariables' in data:
-    if 'evariables' in project:
-        data['evariables'] = dict(data['evariables'].items() + project['evariables'].items())
     for key in data['evariables']:
         template_variables[key] = os.environ.get(key)
         logging.debug("Environment Variable (" + str(key) + ") : " + str(template_variables[key]))
+else:
+    logging.debug("No environment variables")
 
 if 'split' in data:
     for var in data['split']:
         template_variables[var['var']] = template_variables[var['var']].split(var['delim'])
+
+logging.debug("Final data: " + json.dumps(data,2))
 
 def findTemplates():
     templates = []
@@ -118,7 +122,8 @@ def findTemplates():
     topdir = '.'
 
     # The arg argument for walk, and subsequently ext for step
-    exten = '.orig.tpl'
+    # exten = '.orig.tpl'
+    exten = args.templateext
 
     def step((ext), dirname, names):
         ext = ext.lower()
@@ -144,6 +149,8 @@ if len(recurseTemplates) > 0:
     else:
         data['templates'] = recurseTemplates
 
+logging.debug("Templates found: " + json.dumps(recurseTemplates))
+# exit(1)
 
 collect = {}
 #process the templates
@@ -174,15 +181,26 @@ if 'templates' in data:
 
             for e in engines:
                 if e == 'jinja2':
-                    logging.debug("Processign Jinja template")
+                    logging.debug("Processing Jinja template")
                     try:
                         if filedata[-1:] != '\n':
                             logging.warn(src + " does not contain a newline at the end of file, " + dst + " might appear mangled.")
 
-                        template = Jinja2Template(filedata)
+                        env = Environment()
+                        parsed_content = env.parse(filedata)
+
+                        for var in meta.find_undeclared_variables(parsed_content):
+                            if var not in template_variables:
+                                logging.error("Variable: " + var + " not defined")
+
+                        template = Jinja2Template(filedata, undefined=DebugUndefined)
+
                         filedata = template.render(template_variables)
+                        # meta.
+
                     except Exception,e:
-                        logging.debug( "Error: ", str(e) )
+                        logging.debug( "Error: ", e)
+
 
             if 'collect' in data:
                 logging.debug("Found a collect directive")
@@ -203,6 +221,12 @@ if 'templates' in data:
                         f = open(os.path.join(args.workingdir, dst),'w')
                         f.write(filedata)
                         f.close()
+
+            else:
+                logging.debug("Writing " + dst)
+                f = open(os.path.join(args.workingdir, dst), 'w')
+                f.write(filedata)
+                f.close()
 
 # print collect
 for key in collect:

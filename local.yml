@@ -1,0 +1,16 @@
+variables:
+  apps:
+    - one
+    - two
+    - three
+  bigstring: "This is bigger"
+  moomoo: "got it"
+
+templates:
+  - src: tests/template1.jinja2
+    dst: tests/template1.out
+
+
+collect:
+  - regex: dc-\d{2}.+\.orig\.tpl
+    dst: tests/combined.yaml
