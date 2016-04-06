@@ -14,3 +14,16 @@ templates:
 collect:
   - regex: dc-\d{2}.+\.orig\.tpl
     dst: tests/combined.yaml
+
+  - regex: dc-\d{2}.+\.orig\.tpl
+    dst: tests/combinedv2.yaml
+    indent: 2
+    preamble: |
+      version: '2'
+      services:
+    postamble: |
+      networks:
+        front-tier:
+          driver: bridge
+        back-tier:
+          driver: bridge

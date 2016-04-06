@@ -25,6 +25,7 @@ parser.add_argument('--loglevel', type=str, default='WARN', help="Log level.")
 parser.add_argument('--workingdir', type=str, default=os.getcwd(), help="Current working directory")
 parser.add_argument('--templateext', type=str, default='.orig.tpl', help="Template pattern (orig.tpl)")
 parser.add_argument('--stdio', action='store_true', help="Use STDIN/STDOUT")
+parser.add_argument('--strict', action='store_true', help="Report missing variables as errors")
 args = parser.parse_args()
 
 try:
@@ -130,11 +131,11 @@ def jinja_parse(filedata, template_variables, filename):
 
         for var in meta.find_undeclared_variables(parsed_content):
             if var not in template_variables:
-                logging.error("Variable: " + var + " not defined (found in: " + filename + ")")
-                errorlevel = errorlevel + 1
+                if args.strict:
+                    logging.error("Variable: " + var + " not defined (found in: " + filename + ")")
+                    errorlevel = errorlevel + 1
 
-
-        template = Jinja2Template(filedata, undefined=DebugUndefined)
+        template = Jinja2Template(filedata, undefined=DebugUndefined, trim_blocks=True, lstrip_blocks=True)
 
         filedata = template.render(template_variables)
 
@@ -178,7 +179,6 @@ if len(recurseTemplates) > 0:
         data['templates'] = recurseTemplates
 
 logging.debug("Templates found: " + json.dumps(recurseTemplates))
-# exit(1)
 
 if args.stdio:
     filedata = ""
@@ -243,9 +243,23 @@ if 'templates' in data:
 
 # print collect
 for key in collect:
+    this_collect = {}
+    for settings in data['collect']:
+        if settings['dst'] == key:
+            logging.debug("Settings for: " + key + " :" + json.dumps(settings))
+            this_collect = settings
     logging.debug("Writing 'collected' file " + key)
     f = open(os.path.join(args.workingdir, key), 'w')
-    f.write(collect[key])
+    if 'preamble' in this_collect:
+        f.write(this_collect['preamble'])
+    if 'indent' in this_collect:
+        spacer = " " * this_collect['indent']
+        for line in collect[key].split('\n'):
+            f.write(spacer + line + '\n')
+    else:
+        f.write(collect[key])
+    if 'preamble' in this_collect:
+        f.write(this_collect['postamble'])
     f.close()
 
 exit(errorlevel)
